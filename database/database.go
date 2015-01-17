@@ -6,24 +6,16 @@ import "database/sql"
 import "os"
 
 import _ "github.com/mattn/go-sqlite3"
+import "github.com/jinzhu/gorm"
 
 
 func Create(name string) bool {
     filename := Path(name)
     if Exists(name) == false {
-        db, err := sql.Open("sqlite3", filename)
-        if err != nil {
-            log.Fatal(err)
-        }
-        defer db.Close()
+        db = Open(Path(name))
         
         //create _collections
-        sqlStmt := "create table _namespace (id integer not null primary key, name text, type text);"
-        _, err = db.Exec(sqlStmt)
-        if err != nil {
-            log.Printf("%q: %s\n", err, sqlStmt)
-            return false
-        }
+        db.CreateTable(&Namespace{})
         return true
     }
     return false
@@ -31,14 +23,19 @@ func Create(name string) bool {
 
 func Open(name string) (*sql.DB, error) {
     if Exists(name) == true {
-        return sql.Open("sqlite3", Path(name))
+        db, err := gorm.Open("sqlite3", Path(name))
     }
-    return sql.Open("sqlite3", Path(name))
+    
+    db, err := gorm.Open("sqlite3", Path(name))
+    db.SingularTable(true)
+    return db, err
 }
 
 func NamespaceExists(database, namespace string) bool {
     if Exists(database) == true {
         db, _ := Open(database)
+        
+        db.Where(&Namespace{Name: namespace}).First(&namespace)
         
         rows, err := db.Query("SELECT COUNT(id) as count FROM _namespace WHERE name='"+namespace+"' LIMIT 1;")
         if err != nil {
@@ -62,8 +59,6 @@ func CreateNamespace(database, namespace, ns_type string) bool {
     if err != null {
         return log.Fatal(err)
     }
-    
-    db.Exec("INSERT INTO ")
 }
 
 func Exists(name string) bool {
