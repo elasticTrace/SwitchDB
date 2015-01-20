@@ -2,17 +2,19 @@ package database
 
 import "fmt"
 import "log"
-import "database/sql"
+//import "database/sql"
 import "os"
+import "path/filepath"
+import "strings"
 
 import _ "github.com/mattn/go-sqlite3"
 import "github.com/jinzhu/gorm"
 
 
 func Create(name string) bool {
-    filename := Path(name)
     if Exists(name) == false {
-        db = Open(Path(name))
+        fmt.Print(Path(name))
+        db, _ := Open(name)
         
         //create _collections
         db.CreateTable(&Namespace{})
@@ -21,44 +23,51 @@ func Create(name string) bool {
     return false
 }
 
-func Open(name string) (*sql.DB, error) {
-    if Exists(name) == true {
-        db, err := gorm.Open("sqlite3", Path(name))
-    }
+func Open(name string) (gorm.DB, error) {
     
     db, err := gorm.Open("sqlite3", Path(name))
-    db.SingularTable(true)
+    //db.DB()
+    db.LogMode(true)
+    //db.SingularTable(true)
+    
+    
     return db, err
 }
 
-func NamespaceExists(database, namespace string) bool {
+func NamespaceExists(database, ns_name string) bool {
     if Exists(database) == true {
         db, _ := Open(database)
+        namespace := Namespace{}
         
-        db.Where(&Namespace{Name: namespace}).First(&namespace)
+        //db.Where(&Namespace{Name: namespace}).First(&Namespace)
+        query := db.Where(&Namespace{Name: ns_name}).First(&namespace)
+        //rows, err := db.Query("SELECT COUNT(id) as count FROM _namespace WHERE name='"+namespace+"' LIMIT 1;")
         
-        rows, err := db.Query("SELECT COUNT(id) as count FROM _namespace WHERE name='"+namespace+"' LIMIT 1;")
-        if err != nil {
-            log.Fatal(err)
+        if query.RecordNotFound() {
+            return false
         }
-        defer rows.Close()
-        for rows.Next() {
-            var count int
-            rows.Scan(&count)
-            if count > 0 {
-                return true
-            }
-        }
+        return true
     }
     
     return false
 }
 
-func CreateNamespace(database, namespace, ns_type string) bool {
+func NamespaceCreate(database, ns_name, ns_type string) bool {
     db, err := Open(database)
-    if err != null {
-        return log.Fatal(err)
+    if err != nil {
+        log.Fatal(err)
+        return false
     }
+    
+    //check if the name space exists
+    if NamespaceExists(database, ns_name) == true {
+        return false
+    }
+    
+    namespace := Namespace{Name: ns_name, Type: ns_type}
+    db.Create(&namespace)
+    
+    return true
 }
 
 func Exists(name string) bool {
@@ -66,6 +75,28 @@ func Exists(name string) bool {
         return false
     }
     return true
+}
+
+func List(filter string) []string {
+    files, _ := filepath.Glob("./dbs/*.db")
+    dbs := make([]string, 0)
+    var db []string
+    
+    for _, f := range files {
+        db = strings.Split(f, "/")
+        db = strings.Split(db[len(db)-1], ".")
+        dbs = append(dbs, db[0])
+    }
+    return dbs
+}
+
+func NamespaceList(db_name, filter string) []string {
+    db, _ := Open(db_name)
+    var namespace_list Namespace
+    query := db.Find(&namespace_list).Limit(10)
+    fmt.Println(query)
+    var aa []string
+    return aa
 }
 
 func Path(name string) string{
