@@ -47,9 +47,25 @@ func main() {
         c.JSON(409, gin.H{"db": db_name, "ns": ns_name, "error": "Name space already exists"})
     })
     
+    r.PUT("/insert/:db_name/:ns_name", func(c *gin.Context) {
+        db_name := c.Params.ByName("db_name")
+        ns_name := c.Params.ByName("ns_name")
+        
+        if database.Exists(db_name) == false {
+            c.JSON(404, gin.H{"db": c.Params.ByName("db_name"), "error": "Database does not exists"})
+            return
+        }
+        
+        if database.NamespaceExists(db_name, ns_name) {
+            c.JSON(404, gin.H{"db": db_name, "ns", ns_name, "error": "Namespace does nto exist in database"})
+            return
+        }
+        
+        
+    })
     
     
-    r.GET("/database/list/:db_name/namespace", func(c *gin.Context) {
+    r.GET("/database/list/:db_name", func(c *gin.Context) {
         db_name := c.Params.ByName("db_name")
         list := database.NamespaceList(db_name, "")
         c.JSON(200, gin.H{"db": db_name, "ns": list})

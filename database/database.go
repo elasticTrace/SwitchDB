@@ -6,6 +6,7 @@ import "log"
 import "os"
 import "path/filepath"
 import "strings"
+import error
 
 import _ "github.com/mattn/go-sqlite3"
 import "github.com/jinzhu/gorm"
@@ -28,7 +29,7 @@ func Open(name string) (gorm.DB, error) {
     db, err := gorm.Open("sqlite3", Path(name))
     //db.DB()
     db.LogMode(true)
-    //db.SingularTable(true)
+    db.SingularTable(true)
     
     
     return db, err
@@ -50,6 +51,19 @@ func NamespaceExists(database, ns_name string) bool {
     }
     
     return false
+}
+
+func NamespaceGet(database, ns_name string) Namespace, error {
+    var namespace Namespace
+    var err error
+    if Exists(db_name == true) {
+        db, _ := Open(database)
+        db.Where(&Namespace{Name: ns_name}).First(&namespace)
+    } else {
+        err = error.New("name space does not exist")
+    }
+    
+    return namespace, error
 }
 
 func NamespaceCreate(database, ns_name, ns_type string) bool {
@@ -92,11 +106,16 @@ func List(filter string) []string {
 
 func NamespaceList(db_name, filter string) []string {
     db, _ := Open(db_name)
-    var namespace_list Namespace
-    query := db.Find(&namespace_list).Limit(10)
-    fmt.Println(query)
-    var aa []string
-    return aa
+    dbs := make([]string, 0)
+    var namespace_list []Namespace
+    
+    db.Find(&namespace_list)
+    
+    for _, ns := range namespace_list {
+        dbs = append(dbs, ns.Name)
+    }
+    
+    return dbs
 }
 
 func Path(name string) string{
